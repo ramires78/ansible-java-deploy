@@ -1,0 +1,66 @@
+---
+- name: Собираем Java на slave1
+  hosts: build
+  become: true
+
+  tasks:
+    - name: Ставим Java и Maven
+      apt:
+        name:
+          - openjdk-11-jdk
+          - maven
+        state: present
+        update_cache: yes
+
+    - name: Создаем папку
+      file:
+        path: /opt/java-app
+        state: directory
+        mode: '0755'
+
+    - name: Копируем файлы
+      copy:
+        src: "{{ playbook_dir }}/app/"
+        dest: /opt/java-app/
+
+    - name: Собираем проект
+      command: mvn -B package
+      args:
+        chdir: /opt/java-app
+
+    - name: Забираем джарник на master
+      fetch:
+        src: /opt/java-app/target/app.jar
+        dest: "{{ playbook_dir }}/artifacts/app.jar"
+        flat: yes
+
+- name: Запускаем Java на slave2
+  hosts: production
+  become: true
+
+  tasks:
+    - name: Ставим Java
+      apt:
+        name: openjdk-11-jre-headless
+        state: present
+        update_cache: yes
+
+    - name: Создаем папку
+      file:
+        path: /opt/java-app
+        state: directory
+        mode: '0755'
+
+    - name: Копируем джарник
+      copy:
+        src: "{{ playbook_dir }}/artifacts/app.jar"
+        dest: /opt/java-app/app.jar
+        mode: '0644'
+
+    - name: Запускаем приложение
+      command: java -jar /opt/java-app/app.jar
+      register: app_result
+
+    - name: Выводим  результат
+      debug:
+        var: app_result.stdout

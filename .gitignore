@@ -1,0 +1,9 @@
+artifacts/
+target/
+*.jar
+*.class
+*.log
+.ssh/
+*.pem
+id_rsa
+id_ed25519*
